@@ -1,0 +1,23 @@
+bindir = $(DESTDIR)@prefix@/bin
+libdir = $(DESTDIR)@prefix@/lib
+
+all: wa
+
+wa: wa.lisp wc.lisp bi.wa.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --load wa.lisp
+
+bi.wa.lisp: bi.wa
+	@SBCL@ --noinform --no-sysinit --no-userinit --quit --load wc.lisp --eval '(wa-compile "bi.wa")'
+
+clean:
+	rm -f wa
+	rm -f bi.wa.lisp
+
+install: wa
+	mkdir -p $(bindir)
+	cp wa $(bindir)/wa
+	mkdir -p $(libdir)/wa
+
+uninstall:
+	rm -rf $(bindir)/wa
+	rm -rf $(libdir)/wa
