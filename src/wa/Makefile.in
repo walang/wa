@@ -4,7 +4,7 @@ libdir = $(DESTDIR)@prefix@/lib
 all: wa
 
 wa: wa.lisp wc.lisp bi.wa.lisp
-	@SBCL@ --noinform --no-sysinit --no-userinit --load wa.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --quit --load wa.lisp
 
 bi.wa.lisp: bi.wa
 	@SBCL@ --noinform --no-sysinit --no-userinit --quit --load wc.lisp --eval '(wa-compile "bi.wa")'
