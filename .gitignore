@@ -1,0 +1,10 @@
+autom4te.cache
+
+config.log
+config.status
+
+src/*/Makefile
+
+src/wa/bi.wa.lisp
+src/wa/cf.lisp
+src/wa/wa
