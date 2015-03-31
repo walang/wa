@@ -1,11 +1,11 @@
-AC_INIT([wa], [0.0], [rm@mgiken.com])
+AC_INIT([wa], [0.0.0], [rm@mgiken.com])
 
 AC_PATH_PROG([SBCL], [sbcl])
 if test -z "$SBCL"
  then
   exit 1
 fi
-AC_SUBST(CSI)
+AC_SUBST(SBCL)
 
 AC_CONFIG_FILES([src/wa/Makefile src/wa/cf.lisp])
 AC_OUTPUT
