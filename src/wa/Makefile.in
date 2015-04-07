@@ -4,10 +4,10 @@ libdir = $(DESTDIR)@prefix@/lib
 all: wa
 
 wa: cf.lisp wc.lisp bi.wa.lisp wa.lisp
-	@SBCL@ --noinform --no-sysinit --no-userinit --quit --load wa.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wa.lisp
 
 bi.wa.lisp: wc.lisp bi.wa
-	@SBCL@ --noinform --no-sysinit --no-userinit --quit --load wc.lisp --eval '(wa-compile "bi.wa")'
+	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wc.lisp --eval '(wa-compile "bi.wa")'
 
 clean:
 	rm -f wa
