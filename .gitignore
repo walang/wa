@@ -1,10 +1,11 @@
-autom4te.cache
+.DS_Store
 
-config.log
-config.status
+/autom4te.cache
+/config.log
+/config.status
 
-src/*/Makefile
+/src/*/Makefile
 
-src/wa/bi.wa.lisp
-src/wa/cf.lisp
-src/wa/wa
+/src/wa/bi.wa.lisp
+/src/wa/cf.lisp
+/src/wa/wa
