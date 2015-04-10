@@ -1,4 +1,4 @@
-;;;; Wa config.
+; Wa config.
 
 (defconstant +version+ "@PACKAGE_VERSION@")
 (defconstant +prefix+  "@prefix@")
