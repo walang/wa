@@ -204,15 +204,12 @@
 
 (defun wc-assign (x env)
   (let ((a (car x))
-        (b (cadr x)))
+        (b (wc (cadr x) env)))
     (if (symbolp a)
-        (list 'let
-              `((zz ,(wc b env)))
-               (cond ((eq a nil) (error "can't rebind nil"))
-                     ((eq a t) (error "can't rebind t"))
-                     ((lexp a env) `(setf ,a zz))
-                     (t `(defvar ,(wa-name a) zz)))
-               'zz)
+        (cond ((eq a nil) (error "can't rebind nil"))
+              ((eq a t) (error "can't rebind t"))
+              ((lexp a env) `(setf ,a ,b))
+              (t `(setf ,(wa-name a) ,b)))
         (error "first arg to set must be a symbol: ~A" a))))
 
 ; ssyntax --------------------------------------------------------------------
