@@ -1,10 +1,12 @@
 .DS_Store
 
+Makefile
+
 /autom4te.cache
 /config.log
 /config.status
 
-/src/*/Makefile
+/quicklisp
 
 /src/wa/bi.wa.lisp
 /src/wa/cf.lisp
