@@ -1712,7 +1712,7 @@ if test -z "$SBCL"
 fi
 
 
-ac_config_files="$ac_config_files src/wa/Makefile src/wa/cf.lisp"
+ac_config_files="$ac_config_files Makefile src/wa/Makefile src/wa/cf.lisp"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -2419,6 +2419,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
+    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/wa/Makefile") CONFIG_FILES="$CONFIG_FILES src/wa/Makefile" ;;
     "src/wa/cf.lisp") CONFIG_FILES="$CONFIG_FILES src/wa/cf.lisp" ;;
 
