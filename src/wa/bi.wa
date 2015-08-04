@@ -345,5 +345,4 @@
 ;(mac = args
 ;  `(cl (progn  (setf ,@args))))
 
-(on-err (fn (e) (prn e)) (prn "foo"))
 
