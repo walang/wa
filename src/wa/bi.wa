@@ -1,0 +1,349 @@
+; Wa builtin function, macro and core libraries.
+
+(xdef eval wa-eval)
+(xdef apply wa-apply)
+(xdef cons)
+(xdef car)
+(xdef cdr)
+(xdef caar)
+(xdef cadr)
+(xdef cddr)
+(xdef copylist copy-list)
+(xdef list)
+(xdef cons? consp)
+(xdef atom)
+(xdef no not)
+(xdef annotate tag)
+
+(xdef err (&rest args)
+  (error "~{~a~^:~@{ ~a~^~}~}" args))
+
+(assign do (annotate 'mac
+             (fn args `((fn () ,@args)))))
+
+; TODO: safeset, sig
+(assign mac (annotate 'mac
+              (fn (name parms . body)
+                `(assign ,name (annotate 'mac (fn ,parms ,@body))))))
+
+; TODO: safeset, sig
+(mac def (name parms . body)
+  `(assign ,name (fn ,parms ,@body)))
+
+(def map1 (f xs)
+  (if (no xs)
+      nil
+      (cons (f (car xs)) (map1 f (cdr xs)))))
+
+(def pair (xs (o f list))
+  (if (no xs)
+      nil
+      (no (cdr xs))
+      (list (list (car xs)))
+      (cons (f (car xs) (cadr xs))
+            (pair (cddr xs) f))))
+
+(mac with (parms . body)
+  `((fn ,(map1 car (pair parms))
+      ,@body)
+      ,@(map1 cadr (pair parms))))
+
+(mac let (var val . body)
+  `(with (,var ,val) ,@body))
+
+(mac withs (parms . body)
+  (if (no parms)
+      `(do ,@body)
+      `(let ,(car parms) ,(cadr parms)
+         (withs ,(cddr parms) ,@body))))
+
+; TODO:
+(assign uniq (cl #'wa-gensym))
+;(assign uniq (cl #'gensym))
+
+(mac w/uniq (names . body)
+  (if (cons? names)
+      `(with ,(apply + nil (map1 (fn (n) (list n '(uniq)))
+                             names))
+         ,@body)
+      `(let ,names (uniq) ,@body)))
+
+
+(mac and args
+  (if args
+      (if (cdr args)
+          `(if ,(car args) (and ,@(cdr args)))
+          (car args))
+      t))
+
+(mac or args
+  (and args
+       (w/uniq g
+         `(let ,g ,(car args)
+            (if ,g ,g (or ,@(cdr args)))))))
+
+(mac nor args
+  `(no (or ,@args)))
+
+
+; TODO: impl by wa
+(def is (val . vals)
+  (cl (flet ((f (x y)
+               (or (and (numberp x) (numberp y) (= x y))
+                   (eql x y)
+                   (and (stringp x) (stringp y) (string= x y)))))
+        (every (lambda (_) (f val _)) vals))))
+
+(def isnt (x y)
+  (no (is x y)))
+
+(def iso (x y)
+  (or (is x y)
+      (and (cons? x)
+           (cons? y)
+           (iso (car x) (car y))
+           (iso (cdr x) (cdr y)))))
+
+(mac when (test . body)
+  `(if ,test (do ,@body)))
+
+(mac unless (test . body)
+  `(if (no ,test) (do ,@body)))
+
+(xdef stdout *standard-output*)
+(xdef stdin *standard-input*)
+(xdef stderr *error-output*)
+
+(xdef infile (name)
+  (open name :direction :input))
+
+(xdef outfile (name)
+  (open name :direction :output
+             :if-exists :supersede
+             :if-does-not-exist :create))
+
+(xdef instring make-string-input-stream)
+(xdef outstring make-string-output-stream)
+(xdef inside get-output-stream-string)
+
+(xdef call-w/stdout (output-port thunk)
+  (with-open-stream (*standard-output* output-port)
+    (funcall thunk)))
+
+(xdef call-w/stdin (input-port thunk)
+  (with-open-stream (*standard-input* input-port)
+    (funcall thunk)))
+
+(xdef readc (&optional (input-port *standard-input*))
+  (read-char input-port nil nil nil))
+
+(xdef readb (&optional (input-port *standard-input*))
+  (read-byte input-port nil nil))
+
+(xdef peekc (&optional (input-port *standard-output*))
+  (peek-char nil input-port nil nil nil))
+
+(xdef writec write-char)
+
+(xdef writeb (i)
+  (write-byte i *standard-output*))
+
+(xdef write prin1)
+
+(xdef disp princ)
+
+(xdef sread (p eof)
+  (let ((expr (read p nil eof)))
+    (if (eq eof expr) eof expr)))
+
+(xdef pr (&rest args)
+  (format t "~{~A~}" args))
+
+(xdef prn (&rest args)
+  (format t "~{~A~}~%" args))
+
+; XXX
+(xdef + (&rest args)
+  (if (not args)
+      0
+      (etypecase (car args)
+        (number (apply #'+ args))
+        (list   (apply #'append args))
+        (t      (format nil "~{~@[~a~]~}" args)))))
+
+
+; XXX
+(cl (defun pairwise (pred lst)
+      (loop for x in lst
+            for y in (cdr lst)
+            always (funcall pred x y))))
+
+; XXX
+(xdef > (&rest args)
+  (etypecase (car args)
+    (number    (apply #'> args))
+    (string    (pairwise #'string> args))
+    (symbol    (pairwise #'string> args))
+    (character (pairwise #'char> args))
+    (t         (apply #'> args))))
+
+; XXX
+(xdef < (&rest args)
+  (etypecase (car args)
+    (number    (apply #'< args))
+    (string    (pairwise #'string< args))
+    (symbol    (pairwise #'string< args))
+    (character (pairwise #'char< args))
+    (t         (apply #'< args))))
+
+; XXX
+(xdef >= (&rest args)
+  (etypecase (car args)
+    (number    (apply #'>= args))
+    (string    (pairwise #'string>= args))
+    (symbol    (pairwise #'string>= args))
+    (character (pairwise #'char>= args))
+    (t         (apply #'>= args))))
+
+; XXX
+(xdef <= (&rest args)
+  (etypecase (car args)
+    (number    (apply #'<= args))
+    (string    (pairwise #'string<= args))
+    (symbol    (pairwise #'string<= args))
+    (character (pairwise #'char<= args))
+    (t         (apply #'<= args))))
+
+(xdef exact integerp)
+
+
+(xdef -)
+(xdef *)
+(xdef /)
+(xdef mod)
+(xdef expt)
+(xdef sqrt)
+(xdef sin)
+(xdef cos)
+(xdef tan)
+(xdef asin)
+(xdef acos)
+(xdef atan)
+(xdef log)
+
+(xdef rand (&optional (n 1))
+  (random n))
+
+(xdef trunc (n)
+  (values (truncate n)))
+
+(xdef rep)
+
+(xdef len (x)
+  (etypecase x
+    (sequence   (length x))
+    (hash-table (hash-table-count x))))
+
+(assign load (cl #'wa-load)) ; TODO: impl by wa
+
+(def type (x)
+  (cl (cond ((taggedp x) (tag-type x))
+            ((consp x) 'cons)
+            ((symbolp x) 'sym)
+            ((functionp x) 'fn)
+            ((characterp x) 'char)
+            ((stringp x) 'string)
+            ((integerp x) 'int)
+            ((numberp x) 'num)
+            ((hash-table-p x) 'table)
+            ((output-stream-p x) 'output)
+            ((input-stream-p x) 'input)
+            ; TODO:
+            ;((tcp-listener? x)  'socket)
+            ;((thread? x)        'thread)
+            ((typep x 'condition) 'exception)
+            (t  (error "Type: unknown type: ~S" x)))))
+
+(xdef newstring make-string)
+(xdef newstr make-string)
+
+(xdef quit exit)
+
+(mac afn (parms . body)
+  `(let self nil
+     (assign self (fn ,parms ,@body))))
+
+(xdef table ()
+  (make-hash-table :test 'equal))
+
+(xdef maptable maphash)
+
+(xdef msec ()
+  (* (sb-posix:time) 1000))
+
+(xdef seconds ()
+  (sb-posix:time))
+
+;(xdef atomic-invoke (f)
+;  (bt:with-recursive-lock-held (ar-the-lock)
+;    (funcall f)))
+
+(xdef flushout ()
+  (force-output *standard-output*)
+  t)
+
+(xdef open-socket (num)
+  (usocket:socket-listen "localhost"
+                         num
+                         :reuseaddress t
+                         :element-type '(unsigned-byte 8)))
+
+(xdef socket-accept (s)
+  (usocket:socket-accept s))
+
+;(xdef setuid (uid)
+;  (sb-posix:setuid uid))
+
+(xdef new-thread (f)
+  (sb-thread:make-thread f))
+
+(xdef kill-thread (th)
+  (sb-thread:terminate-thread th))
+
+
+;(xdef break-thread break-thread)
+
+(xdef current-thread ()
+  sb-thread:*current-thread*)
+
+(xdef sleep)
+
+(xdef system (cmd)
+  (run-program "/bin/sh" (list "-c" cmd) :search t :output *standard-output*)
+  nil)
+
+(xdef pipe-from (cmd)
+  (process-output (run-program "/bin/sh" (list "-c" cmd) :output :stream)))
+
+(xdef protect (during after)
+  (unwind-protect (funcall during)
+    (funcall after)))
+
+(xdef on-err (errfn f)
+  (handler-case (funcall f)
+    (error (e) (funcall errfn e))))
+
+;(xdef on-err (errfn f)
+;  (multiple-value-bind (ans cond) (ignore-errors (funcall f))
+;    (or ans (funcall errfn cond))))
+
+(xdef details (c)
+  (format nil "~A" c))
+
+
+
+;(mac = args
+;  `(cl (progn  (setf ,@args))))
+
+(on-err (fn (e) (prn e)) (prn "foo"))
+

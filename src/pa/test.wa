@@ -1,0 +1,36 @@
+;(mac catch-err body
+;  `(on-err idfn (fn () ,@body)))
+
+;(def mk-err (msg)
+;  (catch-err (err msg)))
+
+(let i 0
+
+(mac ok ((test expr expected) (o name))
+  `(withs (got ,expr ;(catch-err ,expr); TODO:
+           res (,test got ,expected))
+     (unless res
+       (pr "not "))
+     ; TODO:
+     ;(pr "ok " ,(++ i) " - ")
+     (pr "ok " ,(assign i (+ i 1)) " - ")
+     (write ',expr)
+     (pr " => ")
+     (write got)
+     (unless res
+       (pr ", not the expected result ")
+       (write ,expected))
+     (prn)))
+
+(mac skip ((test expr expected) (o name))
+  ;TODO
+  ;`(prn "ok " ,(++ i)))
+  `(prn "ok " ,(assign i (+ i 1))))
+
+(def plan (n)
+  (prn "1.." n))
+
+(def done-testing ((o n i))
+  (plan n))
+
+)

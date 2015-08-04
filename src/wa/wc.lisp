@@ -1,13 +1,20 @@
 ; Wa compiler.
 
-(load "../../quicklisp/setup.lisp")
+(in-package :cl-user)
+
+
+(load #P"../../quicklisp/setup.lisp")
 (ql:quickload 'cl-ppcre)
+(ql:quickload 'usocket)
+
+(require 'sb-posix)
 
 (load "cf.lisp")
 
-(declaim (ftype function wc))
+(declaim (muffle-conditions warning))
+(setf (readtable-case *readtable*) :invert)
 
-(defconstant +eof+ (gensym "eof"))
+;(declaim (ftype function wc))
 
 ; namespace ------------------------------------------------------------------
 
@@ -31,10 +38,29 @@
 (defun wa-sym-val (x)
   (symbol-value (wa-boundp x)))
 
+; XXX:
+(defun wc-xdef (x &optional (y x) &rest body)
+  (if (listp y)
+      `(setf ,(wa-name x) (lambda (,@y) ,@body))
+      (let* ((pkg (or (car body) 'cl-user))
+             (wan (wa-name x))
+             (cln (intern (string y) pkg)))
+        (handler-case
+          (cond ((macro-function  cln) `(setf ,wan (macro-function  ',cln)))
+                ((symbol-function cln) `(setf ,wan (symbol-function ',cln)))
+                (t                     `(setf ,wan ,cln)))
+          (error (c) `(setf ,wan ,cln))))))
+
 ; helper ---------------------------------------------------------------------
 
 (defun careq (x y)
   (and (consp x) (eq (car x) y)))
+
+; TODO
+(defvar *wa-gensym-count* 0)
+(defun wa-gensym ()
+  (incf *wa-gensym-count*)
+  (intern (format nil "GS~D" *wa-gensym-count*)))
 
 ; literal --------------------------------------------------------------------
 
@@ -180,7 +206,7 @@
 
 ; call -----------------------------------------------------------------------
 
-(defun wc-apply (fn &rest args)
+(defun wa-apply (fn &rest args)
   (cond ((functionp fn) (apply fn args))
         ((hash-table-p fn) (gethash (car args) fn (cadr args)))
         ((consp fn) (nth (car args) fn))
@@ -198,7 +224,7 @@
            `(,(wc fn env) ,@(wc-args args env)))
           ((and (symbolp fn) (not (lexp fn env)) (functionp (wa-sym-val fn)))
            `(funcall ,(wa-var fn env) ,@(wc-args args env)))
-          (t `(wc-apply ,(wc fn env) ,@(wc-args args env))))))
+          (t `(wa-apply ,(wc fn env) ,@(wc-args args env))))))
 
 ; assign ---------------------------------------------------------------------
 
@@ -215,6 +241,7 @@
 ; ssyntax --------------------------------------------------------------------
 
 ; TODO: refactor
+; is regexp justice?
 
 (defun string-value (x)
   (let* ((x (coerce x 'string))
@@ -290,25 +317,27 @@
 (defmacro with-wa-readtable (&body body)
   `(unwind-protect
      (progn
-       (declaim (muffle-conditions warning))
+       ;(declaim (muffle-conditions warning))
        (set-macro-character #\` 'read-backquote)
        (set-macro-character #\, 'read-comma)
        (set-macro-character #\[ 'read-bracket)
        (set-macro-character #\] (get-macro-character #\)))
-       (setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
-             sb-impl::+char-attr-constituent+)
-       (setf (readtable-case *readtable*) :invert)
+;       (setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
+;             sb-impl::+char-attr-constituent+)
+       ;(setf (readtable-case *readtable*) :invert)
        ,@body)
-     (setf (readtable-case *readtable*) :upcase)
-     (setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
-           sb-impl::+char-attr-package-delimiter+)
-     (setf *readtable* (copy-readtable nil))
-     (declaim (unmuffle-conditions warning))))
+     ;(setf (readtable-case *readtable*) :upcase)
+     ;(setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
+     ;      sb-impl::+char-attr-package-delimiter+)
+     ;(setf *readtable* (copy-readtable nil))
+     ;(declaim (unmuffle-conditions warning))))
+     ))
 
 ; compiler -------------------------------------------------------------------
 
 (defun wc (s env)
   (cond ((literalp s) s)
+;        ((keywordp s) s)
         ((ssyntaxp s) (wc (expand-ssyntax s) env))
         ((symbolp s) (wa-var s env))
         ((ssyntaxp (car s)) (wc (cons (expand-ssyntax (car s)) (cdr s)) env))
@@ -318,6 +347,7 @@
         ((careq s 'fn) (wc-fn (cadr s) (cddr s) env))
         ((careq s 'assign) (wc-assign (cdr s) env))
         ((careq s 'cl) (cadr s))
+        ((careq s 'xdef) (apply #'wc-xdef (cdr s)))
         ((consp s) (wc-call (car s) (cdr s) env))
         (t (error "bad object in expression: ~A" s))))
 
@@ -326,49 +356,31 @@
 (defun wa-eval (x)
   (eval (wc x nil)))
 
-; repl -----------------------------------------------------------------------
-
-(defun wa-repl ()
-  (with-wa-readtable
-    (loop
-      (princ "> ")
-      (force-output)
-      (handler-case
-        (format t "~S~%" (wa-eval (read)))
-        (sb-sys:interactive-interrupt (c)
-          (declare (ignore c))
-          (terpri))
-        (end-of-file (c)
-          (declare (ignore c))
-          (terpri)
-          (exit))
-        (error (c)
-          (format *error-output* "Error: ~A~%" c))))))
-
 ; load -----------------------------------------------------------------------
 
 (defun wa-load (filename)
-  (with-open-file (ip filename)
-    (with-wa-readtable
-      (loop for x = (read ip nil +eof+)
-            until (eq x +eof+)
-            do (wa-eval x)))))
+  (let ((eof (gensym)))
+    (with-open-file (ip filename)
+      (with-wa-readtable
+        (loop for x = (read ip nil eof)
+              until (eq x eof)
+              do (wa-eval x))))))
 
 ; compile --------------------------------------------------------------------
 
 (defun wa-compile (filename &optional (debug nil))
-  (let ((*standard-output* (make-broadcast-stream)))
+  (let ((*standard-output* (make-broadcast-stream))
+        (eof (gensym)))
     (with-open-file (ip filename)
       (with-open-file (op (concatenate 'string filename ".lisp")
                           :direction :output
                           :if-exists :supersede)
         (with-wa-readtable
           (format op "; generated by the Wa v~A compiler.~2%" +version+)
-          (format op "(declaim (muffle-conditions warning))~2%")
-          (loop for x = (read ip nil +eof+)
-                until (eq x +eof+)
+          (loop for x = (read ip nil eof)
+                until (eq x eof)
                 do (let ((cl (wc x nil)))
                      (eval cl)
                      (if debug (format op "#|~%~S~%|#~%" x))
                      (format op "~S~2%" cl)))
-          (format op "(declaim (unmuffle-conditions warning))~%"))))))
+          (format op "~S~%" `(setf *wa-gensym-count* ,*wa-gensym-count*)))))))

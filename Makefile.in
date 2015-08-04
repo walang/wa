@@ -13,4 +13,4 @@ quicklisp:
 	rm -f quicklisp.lisp
 
 test: all
-	prove -scfe src/wa/wa t/*/*.t.wa
+	prove --ext t.wa --norc -rscfe src/wa/wa -j 9 t

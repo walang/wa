@@ -1,0 +1,92 @@
+(load "src/pa/test.wa")
+
+; cons -----------------------------------------------------------------------
+
+(ok (iso (cons 'a '(b c)) '(a b c)))
+(ok (iso (cons "a" "b") '("a" . "b")))
+
+; copylist -------------------------------------------------------------------
+
+(ok (iso (copylist nil) nil))
+(ok (iso (copylist '(a b c)) '(a b c)))
+
+; list -----------------------------------------------------------------------
+
+(ok (iso (list) nil))
+(ok (iso (list nil) '(nil)))
+(ok (iso (list 'a) '(a)))
+(ok (iso (list 'a 'b 'c) '(a b c)))
+
+; car ------------------------------------------------------------------------
+
+(ok (is (car nil) nil))
+(ok (is (car '(a 1.2 "b")) 'a))
+
+; cdr ------------------------------------------------------------------------
+
+(ok (is (cdr nil) nil))
+(ok (iso (cdr '(a 1 "b")) '(1 "b")))
+
+; caar -----------------------------------------------------------------------
+
+(ok (is (caar nil) nil))
+(ok (is (caar '((a 1 "b") 'baz)) 'a))
+
+; cadr -----------------------------------------------------------------------
+
+(ok (is (cadr nil) nil))
+(ok (is (cadr '(a 1 "b")) 1))
+
+; cddr -----------------------------------------------------------------------
+
+(ok (is (cddr nil) nil))
+(ok (iso (cddr '(a 1 "b")) '("b")))
+
+; scar -----------------------------------------------------------------------
+
+; TODO:
+
+; scdr -----------------------------------------------------------------------
+
+; TODO:
+
+; size -----------------------------------------------------------------------
+
+(ok (is (len nil) 0))
+(ok (is (len '(a b c d)) 4))
+(ok (is (len '((a b) (c d))) 2))
+
+; set ------------------------------------------------------------------------
+
+; TODO:
+
+; get ------------------------------------------------------------------------
+
+(ok (is ('(a b c d) 0) 'a))
+(ok (is ('(a b c d) 2) 'c))
+(ok (is ('(a b c d) 4) nil))
+
+(done-testing)
+
+#|
+
+       (suite scar
+              on-lists (assert-same '(99 2 3)
+                                    (ret lst '(1 2 3)
+                                         (scar lst 99)))
+              on-strings (assert-same "boo"
+                                      (ret str "foo"
+                                           (scar str #\b))))
+       (suite scdr
+              on-lists (assert-same '(a y z)
+                                    (ret lst '(a b c)
+                                         (scdr lst '(y z))))
+              on-nested-list (assert-same '(a b c x y z)
+                                          (ret lst '(a b c)
+                                               (scdr (cdr (cdr lst))
+                                                     '(x y z)))))
+
+       set-element (assert-same '(x b c)
+                                (ret lst '(a b c)
+                                     (sref lst 'x 0)))
+|#
