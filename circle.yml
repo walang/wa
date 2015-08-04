@@ -1,0 +1,11 @@
+machine:
+  timezone:
+    Asia/Tokyo
+
+dependencies:
+  override:
+    - sudo apt-get update; sudo apt-get install sbcl
+
+test:
+  override:
+    - ./configure; make test
