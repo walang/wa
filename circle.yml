@@ -4,7 +4,8 @@ machine:
 
 dependencies:
   override:
-    - sudo apt-get update; sudo apt-get install sbcl
+    - curl -sL 'http://prdownloads.sourceforge.net/sbcl/sbcl-1.2.7-x86-linux-binary.tar.bz2' | tar jx
+    - cd sbcl-*; sudo INSTALL_ROOT=/usr sh install.sh
 
 test:
   override:
