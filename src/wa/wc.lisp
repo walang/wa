@@ -45,7 +45,7 @@
         (cond ((char= (char s 0) #\:)
                (intern (string-upcase (string-left-trim ":" s)) "KEYWORD"))
               ((ppcre:scan ":" s)
-               (let ((xs (ppcre:split ":" s)))
+               (let ((xs (ppcre:split ":{1,2}" s)))
                   (intern (cadr xs) (car xs))))
           (t x)))
       x))
