@@ -1,0 +1,60 @@
+(load "src/pa/test.wa")
+
+; eval -----------------------------------------------------------------------
+
+(ok (is (eval '(+ 21 4)) 25))
+(ok (is (eval '((fn (x y) (* x y)) 16 4)) 64))
+
+; apply ----------------------------------------------------------------------
+
+(ok (is (apply + '(1 2)) 3))
+(ok (is (apply (fn (x y) (* x y)) '(17 3)) 51))
+(ok (is (apply + "a" "b" '("c" "d")) "abcd"))
+
+; bracket fn -----------------------------------------------------------------
+
+(ok (is ([* _ _] 15) 225))
+(ok (is (apply [* _ _] '(16)) 256))
+(ok (is ([] 21) nil))
+
+; ssyntax? -------------------------------------------------------------------
+
+(ok (isnt (ssyntax? 'a:b) nil))
+(ok (isnt (ssyntax? '~a:b) nil))
+(ok (isnt (ssyntax? '~a) nil))
+(ok (isnt (ssyntax? 'a.b) nil))
+(ok (isnt (ssyntax? '.a) nil))
+(ok (isnt (ssyntax? 'a!b) nil))
+(ok (isnt (ssyntax? 'a&b) nil))
+(ok (isnt (ssyntax? '&a&b&) nil))
+
+; ssexpand -------------------------------------------------------------------
+
+(ok (iso (ssexpand 'a:b) '(compose a b)))
+(ok (iso (ssexpand '~a) '(complement a)))
+(ok (iso (ssexpand 'a:~b:c) '(compose a (complement b) c)))
+(ok (iso (ssexpand '~a:b:c) '(compose (complement a) b c)))
+(ok (iso (ssexpand 'a:1.2) '(compose a 1.2)))
+(ok (is (type ((ssexpand 'a:1.2) 2)) 'num))
+(ok (iso (ssexpand '*.a.b) '((* a) b)))
+(ok (iso (ssexpand 'cons!a!b) '((cons 'a) 'b)))
+(ok (iso (ssexpand 'a.b!c.d) '(((a b) 'c) d)))
+(ok (iso (ssexpand '.a.b.c) '(((get a) b) c)))
+(ok (iso (ssexpand '!a.b.c) '(((get 'a) b) c)))
+(ok (iso (ssexpand 'a&b) '(andf a b)))
+
+; ssyntax --------------------------------------------------------------------
+
+(mac test-double (x) `(+ ,x ,x))
+
+(ok (is ((fn () (sqrt:+ 40 2.25))) 6.5))
+(prn (test-double:sqrt 256))
+(ok (is (test-double:sqrt 256) 32))
+(ok (is ((fn (f) (f sqrt:* 5 20 1.0)) (fn (op x y z) (+ z (op x y)))) 11.0))
+
+(ok (iso list.nil (list nil)))
+(ok (is ((fn (s) s.1) "foo") #\o))
+(ok (is (let x (fn(n) (fn(p) (is (mod n p) 0))) (~odd?&x.9 3)) nil))
+(ok (iso (let x (fn(n) (fn(p) (is (mod n p) 0))) (map ~odd?&x.9 '(3 4 5))) '(nil t t)))
+
+(done-testing)

@@ -51,7 +51,7 @@
       x))
 
 (defun cl-tree (x)
-  (cond ((not x) nil)
+  (cond ((null x) nil)
         ((consp (car x)) (cons (cl-tree (car x)) (cl-tree (cdr x))))
         (t (cons (cl-package-delimiter (car x)) (cl-tree (cdr x))))))
 
@@ -280,7 +280,7 @@
         (cons 'compose elts))))
 
 (defun build-sexpr (toks orig)
-  (cond ((null toks) 'get)
+  (cond ((or (string= (car toks) "") (null toks)) 'get)
         ((or (string= (car toks) ".") (string= (car toks) "!"))
          (error "bad ssyntax: ~A" orig))
         ((null (cdr toks)) (string-value (car toks)))
