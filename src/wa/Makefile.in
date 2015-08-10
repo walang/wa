@@ -3,15 +3,15 @@ libdir = $(DESTDIR)@prefix@/lib
 
 all: wa
 
-wa: cf.lisp wc.lisp bi.wa.lisp wa.lisp
+wa: cf.lisp wc.lisp bi.lisp wa.lisp
 	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wa.lisp
 
-bi.wa.lisp: wc.lisp bi.wa
-	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wc.lisp --eval '(wa-compile "bi.wa")'
+bi.lisp: bi/*.wa
+	echo "(wa-load-from-string \"`cat bi/*.wa | sed -e 's/\\\\/\\\\\\\\\\\\\\\\/g' | sed -e 's/\"/\\\\\"/g'`\")" > bi.lisp
 
 clean:
 	rm -f wa
-	rm -f bi.wa.lisp
+	rm -f bi.lisp
 
 install: wa
 	mkdir -p $(bindir)
