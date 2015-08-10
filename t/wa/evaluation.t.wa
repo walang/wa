@@ -57,4 +57,9 @@
 (ok (is (let x (fn(n) (fn(p) (is (mod n p) 0))) (~odd?&x.9 3)) nil))
 (ok (iso (let x (fn(n) (fn(p) (is (mod n p) 0))) (map ~odd?&x.9 '(3 4 5))) '(nil t t)))
 
+; idfn -----------------------------------------------------------------------
+
+(ok (is (idfn car) car))
+(ok (is (idfn 'car) 'car))
+
 (done-testing)
