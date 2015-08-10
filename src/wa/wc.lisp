@@ -191,7 +191,7 @@
   (mapcar (lambda (x) (wc x env)) body))
 
 (defun wc-complex-fn (args body env)
-  (let* ((ra '| COMPLEX-ARGS |) (z (wc-complex-args args env ra t)))
+  (let* ((ra (gensym)) (z (wc-complex-args args env ra t)))
     `(lambda (&rest ,ra)
        (let* ,z
          ,@(wc-body body (append (wc-complex-getargs z) env))))))
@@ -330,6 +330,13 @@
   (declare (ignore c))
   (list 'fn '(_) (read-delimited-list #\] s t)))
 
+(defun xxx ()
+     (setf (readtable-case *readtable*) :upcase)
+     (setf (elt sb-impl::*constituent-trait-table* (char-code #\:))
+           sb-impl::+char-attr-package-delimiter+)
+     (setf *readtable* (copy-readtable nil))
+     )
+
 (defmacro with-wa-readtable (&body body)
   `(unwind-protect
      (progn
@@ -374,13 +381,20 @@
 
 ; load -----------------------------------------------------------------------
 
-(defun wa-load (filename)
+(defun wa-load1 (ip)
   (let ((eof (gensym)))
-    (with-open-file (ip filename)
-      (with-wa-readtable
-        (loop for x = (read ip nil eof)
-              until (eq x eof)
-              do (wa-eval x))))))
+    (with-wa-readtable
+      (loop for x = (read ip nil eof)
+            until (eq x eof)
+            do (wa-eval x)))))
+
+(defun wa-load (filename)
+  (with-open-file (ip filename)
+    (wa-load1 ip)))
+
+(defun wa-load-from-string (str)
+  (with-input-from-string (ip str)
+    (wa-load1 ip)))
 
 ; compile --------------------------------------------------------------------
 

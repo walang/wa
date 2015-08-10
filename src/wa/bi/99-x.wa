@@ -1,0 +1,249 @@
+(assign do (annotate 'mac
+             (fn args `((fn () ,@args)))))
+
+(assign safeset (annotate 'mac
+                  (fn (var val)
+                    `(do (if (bound? ',var)
+                             (do (disp "*** redefining " (stderr))
+                                 (disp ',var (stderr))
+                                 (disp #\newline (stderr))))
+                         (assign ,var ,val)))))
+
+; TODO: safeset, sig
+(assign mac (annotate 'mac
+              (fn (name parms . body)
+                `(assign ,name (annotate 'mac (fn ,parms ,@body))))))
+
+(mac w/uniq (names . body)
+  (if (cons? names)
+      `(with ,(apply + nil (map1 (fn (n) (list n '(uniq)))
+                             names))
+         ,@body)
+      `(let ,names (uniq) ,@body)))
+
+; TODO: safeset, sig
+(mac def (name parms . body)
+  `(assign ,name (fn ,parms ,@body)))
+(mac and args
+  (if args
+      (if (cdr args)
+          `(if ,(car args) (and ,@(cdr args)))
+          (car args))
+      t))
+
+(mac or args
+  (and args
+       (w/uniq g
+         `(let ,g ,(car args)
+            (if ,g ,g (or ,@(cdr args)))))))
+
+(mac nor args
+  `(no (or ,@args)))
+(mac compose args
+  (let g (uniq)
+    `(fn ,g
+       ,((afn (fs)
+           (if (cdr fs)
+               (list (car fs) (self (cdr fs)))
+               `(apply ,(if (car fs) (car fs) 'idfn) ,g)))
+         args))))
+
+(mac complement (f)
+  (let g (uniq)
+    `(fn ,g (no (apply ,f ,g)))))
+
+(def idfn (x) x)
+;(mac conswhen (f x y)
+;  (w/uniq (gf gx)
+;   `(with (,gf ,f ,gx ,x)
+;      (if (,gf ,gx) (cons ,gx ,y) ,y))))
+
+(def consif (x y) (if x (cons x y) y))
+
+; firstn
+; nthcdr
+; last
+; flat
+; rev
+; carif
+; caris
+; intersperse
+; split
+
+(def pair (xs (o f list))
+  (if (no xs)
+      nil
+      (no (cdr xs))
+      (list (list (car xs)))
+      (cons (f (car xs) (cadr xs))
+            (pair (cddr xs) f))))
+
+; tuples
+; join
+
+; range
+; n-of
+; adjoin
+; counts
+; commonest
+; Wa builtin function, macro and core libraries.
+
+
+(def map1 (f xs)
+  (if (no xs)
+      nil
+      (cons (f (car xs)) (map1 f (cdr xs)))))
+
+(mac with (parms . body)
+  `((fn ,(map1 car (pair parms))
+      ,@body)
+      ,@(map1 cadr (pair parms))))
+
+(mac let (var val . body)
+  `(with (,var ,val) ,@body))
+
+(mac withs (parms . body)
+  (if (no parms)
+      `(do ,@body)
+      `(let ,(car parms) ,(cadr parms)
+         (withs ,(cddr parms) ,@body))))
+
+(mac and args
+  (if args
+      (if (cdr args)
+          `(if ,(car args) (and ,@(cdr args)))
+          (car args))
+      t))
+
+(mac or args
+  (and args
+       (w/uniq g
+         `(let ,g ,(car args)
+            (if ,g ,g (or ,@(cdr args)))))))
+
+(mac nor args
+  `(no (or ,@args)))
+
+
+; TODO: impl by wa
+(def is (val . vals)
+  (cl (flet ((f (x y)
+               (or (and (numberp x) (numberp y) (= x y))
+                   (eql x y)
+                   (and (stringp x) (stringp y) (string= x y)))))
+        (every (lambda (_) (f val _)) vals))))
+
+(def isnt (x y)
+  (no (is x y)))
+
+(def iso (x y)
+  (or (is x y)
+      (and (cons? x)
+           (cons? y)
+           (iso (car x) (car y))
+           (iso (cdr x) (cdr y)))))
+
+(mac when (test . body)
+  `(if ,test (do ,@body)))
+
+(mac unless (test . body)
+  `(if (no ,test) (do ,@body)))
+
+;(assign load (cl #'wa-load)) ; TODO: impl by wa
+
+(def type (x)
+  (cl (cond ((taggedp x) (tag-type x))
+            ((consp x) 'cons)
+            ((symbolp x) 'sym)
+            ((functionp x) 'fn)
+            ((characterp x) 'char)
+            ((stringp x) 'string)
+            ((integerp x) 'int)
+            ((numberp x) 'num)
+            ((hash-table-p x) 'table)
+            ((output-stream-p x) 'output)
+            ((input-stream-p x) 'input)
+            ; TODO:
+            ;((tcp-listener? x)  'socket)
+            ;((thread? x)        'thread)
+            ((typep x 'condition) 'exception)
+            (t  (error "Type: unknown type: ~S" x)))))
+
+
+(mac afn (parms . body)
+  `(let self nil
+     (assign self (fn ,parms ,@body))))
+
+
+;(mac = args
+;  `(cl (progn  (setf ,@args))))
+
+
+(mac compose args
+  (let g (uniq)
+    `(fn ,g
+       ,((afn (fs)
+           (if (cdr fs)
+               (list (car fs) (self (cdr fs)))
+               `(apply ,(if (car fs) (car fs) 'idfn) ,g)))
+         args))))
+
+(mac complement (f)
+  (let g (uniq)
+    `(fn ,g (no (apply ,f ,g)))))
+
+
+(def orf fns
+  (fn args
+    ((afn (fs)
+       (and fs (or (apply (car fs) args) (self (cdr fs)))))
+     fns)))
+
+(def andf fns
+  (fn args
+    ((afn (fs)
+       (if (no fs)       t
+           (no (cdr fs)) (apply (car fs) args)
+                         (and (apply (car fs) args) (self (cdr fs)))))
+     fns)))
+
+(def empty (seq)
+  (or (no seq)
+      (and (or (is (type seq) 'string) (is (type seq) 'table))
+           (is (len seq) 0))))
+
+(def reclist (f xs)
+  (and xs (or (f xs) (reclist f (cdr xs)))))
+
+(def isa (x y) (is (type x) y))
+
+(def testify (x)
+  (if (isa x 'fn) x [is _ x]))
+
+(def some (test seq)
+  (let f (testify test)
+    (if (list? seq)
+        (reclist f:car seq)
+        (recstring f:seq seq))))
+
+(def all (test seq)
+  (~some (complement (testify test)) seq))
+
+(def map (f . seqs)
+  (if (some [isa _ 'string] seqs)
+       (withs (n   (apply min (map len seqs))
+               new (newstring n))
+         ((afn (i)
+            (if (is i n)
+                new
+                (do (sref new (apply f (map [_ i] seqs)) i)
+                    (self (+ i 1)))))
+          0))
+      (no (cdr seqs))
+       (map1 f (car seqs))
+      ((afn (seqs)
+        (if (some no seqs)
+            nil
+            (cons (apply f (map1 car seqs))
+                  (self (map1 cdr seqs)))))
+       seqs)))

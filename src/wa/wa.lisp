@@ -5,7 +5,10 @@
 (declaim (optimize (speed 3) (safety 1) (debug 0)))
 
 (load "wc.lisp")
-(load "bi.wa.lisp")
+(load "bi.lisp")
+
+; XXX
+(xxx)
 
 (defun wa-repl ()
   (with-wa-readtable
