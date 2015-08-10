@@ -8,6 +8,6 @@ Makefile
 
 /quicklisp
 
-/src/wa/bi.wa.lisp
+/src/wa/bi.lisp
 /src/wa/cf.lisp
 /src/wa/wa
