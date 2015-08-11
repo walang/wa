@@ -2,19 +2,15 @@
 
 (in-package :cl-user)
 
-
+(load "cf.lisp")
 (load #P"../../quicklisp/setup.lisp")
+
 (ql:quickload 'cl-ppcre)
 (ql:quickload 'usocket)
 
 (require 'sb-posix)
 
-(load "cf.lisp")
-
-(declaim (muffle-conditions warning))
-(setf (readtable-case *readtable*) :invert)
-
-;(declaim (ftype function wc))
+(declaim (ftype function wc))
 
 ; namespace ------------------------------------------------------------------
 
@@ -37,35 +33,6 @@
 
 (defun wa-sym-val (x)
   (symbol-value (wa-boundp x)))
-
-; XXX:
-(defun cl-package-delimiter (x)
-  (if (symbolp x)
-      (let ((s (string x)))
-        (cond ((char= (char s 0) #\:)
-               (intern (string-upcase (string-left-trim ":" s)) "KEYWORD"))
-              ((ppcre:scan ":" s)
-               (let ((xs (ppcre:split ":{1,2}" s)))
-                  (intern (cadr xs) (car xs))))
-          (t x)))
-      x))
-
-(defun cl-tree (x)
-  (cond ((null x) nil)
-        ((consp (car x)) (cons (cl-tree (car x)) (cl-tree (cdr x))))
-        (t (cons (cl-package-delimiter (car x)) (cl-tree (cdr x))))))
-
-; XXX:
-(defun wc-xdef (x &optional (y x) &rest body)
-  (if (listp y)
-      `(setf ,(wa-name x) (lambda (,@y) ,@(cl-tree body)))
-      (let* ((wan (wa-name x))
-             (cln (cl-package-delimiter y)))
-        (handler-case
-          (cond ((macro-function  cln) `(setf ,wan (macro-function  ',cln)))
-                ((symbol-function cln) `(setf ,wan (symbol-function ',cln)))
-                (t                     `(setf ,wan ,cln)))
-          (error (c) `(setf ,wan ,cln))))))
 
 ; helper ---------------------------------------------------------------------
 
@@ -220,6 +187,32 @@
                     (list '&rest args))
         ,@(wc-body body (append (wc-arglist args) env)))))
 
+; xdef -----------------------------------------------------------------------
+
+(defun cl-package-delimiter (x)
+  (if (symbolp x)
+      (let ((s (string x)))
+        (cond ((char= (char s 0) #\:)
+               (intern (string-upcase (string-left-trim ":" s)) "KEYWORD"))
+              ((ppcre:scan ":" s)
+               (let ((xs (ppcre:split ":{1,2}" s)))
+                (intern (cadr xs) (car xs))))
+              (t x)))
+      x))
+
+(defun cl-tree (x)
+  (cond ((null x) nil)
+        ((consp (car x)) (cons (cl-tree (car x)) (cl-tree (cdr x))))
+        (t (cons (cl-package-delimiter (car x)) (cl-tree (cdr x))))))
+
+(defun wc-xdef (x &optional (y x) &rest body)
+  (if (listp y)
+      `(setf ,(wa-name x) (lambda (,@y) ,@(cl-tree body)))
+      (let* ((wn (wa-name x)) (cn (cl-package-delimiter y)))
+        (if (symbol-function cn)
+            `(setf ,wn #',cn)
+            `(setf ,wn ,cn)))))
+
 ; call -----------------------------------------------------------------------
 
 (defun wa-apply (fn &rest args)
@@ -330,37 +323,28 @@
   (declare (ignore c))
   (list 'fn '(_) (read-delimited-list #\] s t)))
 
-(defun xxx ()
-     (setf (readtable-case *readtable*) :upcase)
-     (setf (elt sb-impl::*constituent-trait-table* (char-code #\:))
-           sb-impl::+char-attr-package-delimiter+)
-     (setf *readtable* (copy-readtable nil))
-     )
-
 (defmacro with-wa-readtable (&body body)
   `(unwind-protect
      (progn
-       ;(declaim (muffle-conditions warning))
+       (declaim (muffle-conditions warning))
        (set-macro-character #\` 'read-backquote)
        (set-macro-character #\, 'read-comma)
        (set-macro-character #\[ 'read-bracket)
        (set-macro-character #\] (get-macro-character #\)))
        (setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
              sb-impl::+char-attr-constituent+)
-       ;(setf (readtable-case *readtable*) :invert)
+       (setf (readtable-case *readtable*) :invert)
        ,@body)
-     ;(setf (readtable-case *readtable*) :upcase)
-     ;(setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
-     ;      sb-impl::+char-attr-package-delimiter+)
-     ;(setf *readtable* (copy-readtable nil))
-     ;(declaim (unmuffle-conditions warning))))
-     ))
+     (setf (readtable-case *readtable*) :upcase)
+     (setf (elt sb-impl::*constituent-trait-table* ,(char-code #\:))
+           sb-impl::+char-attr-package-delimiter+)
+     (setf *readtable* (copy-readtable nil))
+     (declaim (unmuffle-conditions warning))))
 
 ; compiler -------------------------------------------------------------------
 
 (defun wc (s env)
   (cond ((literalp s) s)
-;        ((keywordp s) s)
         ((ssyntaxp s) (wc (expand-ssyntax s) env))
         ((symbolp s) (wa-var s env))
         ((ssyntaxp (car s)) (wc (cons (expand-ssyntax (car s)) (cdr s)) env))
@@ -379,21 +363,38 @@
 (defun wa-eval (x)
   (eval (wc x nil)))
 
+; repl -----------------------------------------------------------------------
+
+(defun wa-repl ()
+  (loop
+    (princ "> ")
+    (force-output)
+    (handler-case
+      (format t "~S~%" (wa-eval (read)))
+      (sb-sys:interactive-interrupt (c)
+        (declare (ignore c))
+        (terpri))
+      (end-of-file (c)
+        (declare (ignore c))
+        (terpri)
+        (exit))
+      (error (c)
+        (format *error-output* "Error: ~A~%" c)))))
+
 ; load -----------------------------------------------------------------------
 
 (defun wa-load1 (ip)
   (let ((eof (gensym)))
-    (with-wa-readtable
-      (loop for x = (read ip nil eof)
-            until (eq x eof)
-            do (wa-eval x)))))
+    (loop for x = (read ip nil eof)
+          until (eq x eof)
+          do (wa-eval x))))
 
 (defun wa-load (filename)
   (with-open-file (ip filename)
     (wa-load1 ip)))
 
-(defun wa-load-from-string (str)
-  (with-input-from-string (ip str)
+(defun wa-load-from-string (string)
+  (with-input-from-string (ip string)
     (wa-load1 ip)))
 
 ; compile --------------------------------------------------------------------

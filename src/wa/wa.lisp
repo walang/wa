@@ -7,31 +7,11 @@
 (load "wc.lisp")
 (load "bi.lisp")
 
-; XXX
-(xxx)
-
-(defun wa-repl ()
-  (with-wa-readtable
-    (loop
-      (princ "> ")
-      (force-output)
-      (handler-case
-        (format t "~S~%" (wa-eval (read)))
-        (sb-sys:interactive-interrupt (c)
-          (declare (ignore c))
-          (terpri))
-        (end-of-file (c)
-          (declare (ignore c))
-          (terpri)
-          (exit))
-        (error (c)
-          (format *error-output* "Error: ~A~%" c))))))
-
 (defun main ()
   (let ((file (cadr *posix-argv*)))
     (if file
-        (wa-load file)
-        (wa-repl))))
+        (with-wa-readtable (wa-load file))
+        (with-wa-readtable (wa-repl)))))
 
 (loop repeat 10 do (gc :full t))
 

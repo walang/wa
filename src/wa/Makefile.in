@@ -7,7 +7,7 @@ wa: cf.lisp wc.lisp bi.lisp wa.lisp
 	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wa.lisp
 
 bi.lisp: bi/*.wa
-	echo "(wa-load-from-string \"`cat bi/*.wa | sed -e 's/\\\\/\\\\\\\\\\\\\\\\/g' | sed -e 's/\"/\\\\\"/g'`\")" > bi.lisp
+	echo "(with-wa-readtable (wa-load-from-string \"`cat bi/*.wa | sed -e 's/\\\\/\\\\\\\\\\\\\\\\/g' | sed -e 's/\"/\\\\\"/g'`\"))" > bi.lisp
 
 clean:
 	rm -f wa

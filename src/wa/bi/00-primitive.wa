@@ -37,8 +37,6 @@
 
 (xdef annotate tag)
 
-; TODO
-;(xdef uniq wa-gensym)
 (xdef uniq gensym)
 
 ; math -----------------------------------------------------------------------
@@ -133,7 +131,7 @@
     (character (pairwise #'char<= args))
     (t         (apply #'<= args))))
 
-; bound?
+(xdef bound? wa-boundp)
 
 (xdef exact? integerp)
 
@@ -245,9 +243,9 @@
              :if-exists :supersede
              :if-does-not-exist :create))
 
-(xdef stdin *standard-input*)
-(xdef stdout *standard-output*)
-(xdef stderr *error-output*)
+(xdef stdin () *standard-input*)
+(xdef stdout () *standard-output*)
+(xdef stderr () *error-output*)
 
 (xdef call-w/stdin (input-port thunk)
   (with-open-stream (*standard-input* input-port)
