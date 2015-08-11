@@ -14,3 +14,6 @@ quicklisp:
 
 test: all
 	prove --ext t.wa --norc -rscfe src/wa/wa -j 9 t
+
+watch:
+	fswatch-run -e '/src/wa/wa' -e '/src/wa/bi.lisp' src 'make test'
