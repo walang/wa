@@ -1,10 +1,6 @@
-machine:
-  timezone:
-    Asia/Tokyo
-
 dependencies:
   override:
-    - curl -sL 'http://prdownloads.sourceforge.net/sbcl/sbcl-1.2.7-x86-linux-binary.tar.bz2' | tar jx
+    - curl -sL 'http://prdownloads.sourceforge.net/sbcl/sbcl-1.2.14-x86-64-linux-binary.tar.bz2' | tar jx
     - cd sbcl-*; sudo sh install.sh
 
 test:
