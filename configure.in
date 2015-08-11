@@ -7,5 +7,5 @@ if test -z "$SBCL"
 fi
 AC_SUBST(SBCL)
 
-AC_CONFIG_FILES([Makefile src/wa/Makefile src/wa/cf.lisp])
+AC_CONFIG_FILES([Makefile src/wa/Makefile src/pa/Makefile src/wa/cf.lisp])
 AC_OUTPUT

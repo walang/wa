@@ -1,10 +1,10 @@
-MAKEDIRS := src/wa
+MAKEDIRS := src/wa src/pa
 
 all install uninstall: quicklisp
-	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@)
+	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@;)
 
 clean:
-	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@)
+	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@;)
 	rm -rf quicklisp
 
 quicklisp:

@@ -1,0 +1,12 @@
+libdir = $(DESTDIR)@prefix@/lib
+
+all:
+
+clean:
+
+install:
+	mkdir -p $(libdir)/wa
+	cp *.wa $(libdir)/wa
+
+uninstall:
+	rm -rf $(libdir)/wa
