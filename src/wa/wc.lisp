@@ -39,12 +39,6 @@
 (defun careq (x y)
   (and (consp x) (eq (car x) y)))
 
-; TODO
-(defvar *wa-gensym-count* 0)
-(defun wa-gensym ()
-  (incf *wa-gensym-count*)
-  (intern (format nil "GS~D" *wa-gensym-count*)))
-
 ; literal --------------------------------------------------------------------
 
 (defun literalp (x)
@@ -202,6 +196,7 @@
 
 (defun cl-tree (x)
   (cond ((null x) nil)
+        ((symbolp x) (cl-package-delimiter x))
         ((consp (car x)) (cons (cl-tree (car x)) (cl-tree (cdr x))))
         (t (cons (cl-package-delimiter (car x)) (cl-tree (cdr x))))))
 
@@ -209,9 +204,9 @@
   (if (listp y)
       `(setf ,(wa-name x) (lambda (,@y) ,@(cl-tree body)))
       (let* ((wn (wa-name x)) (cn (cl-package-delimiter y)))
-        (if (symbol-function cn)
-            `(setf ,wn #',cn)
-            `(setf ,wn ,cn)))))
+        (cond ((macro-function cn)  `(setf ,wn ,(macro-function cn)))
+              ((symbol-function cn) `(setf ,wn ,(symbol-function cn)))
+              (t                    `(setf ,wn ,cn))))))
 
 ; call -----------------------------------------------------------------------
 
@@ -413,5 +408,4 @@
                 do (let ((cl (wc x nil)))
                      (eval cl)
                      (if debug (format op "#|~%~S~%|#~%" x))
-                     (format op "~S~2%" cl)))
-          (format op "~S~%" `(setf *wa-gensym-count* ,*wa-gensym-count*)))))))
+                     (format op "~S~2%" cl))))))))
