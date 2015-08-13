@@ -163,9 +163,8 @@
             ((hash-table-p x) 'table)
             ((output-stream-p x) 'output)
             ((input-stream-p x) 'input)
-            ; TODO:
-            ;((tcp-listener? x)  'socket)
-            ;((thread? x)        'thread)
+            ((usocket:stream-server-usocket-p x) 'socket)
+            ((thread-p x)        'thread)
             ((typep x 'condition) 'exception)
             (t  (error "Type: unknown type: ~S" x)))))
 

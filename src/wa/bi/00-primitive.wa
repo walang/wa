@@ -39,6 +39,11 @@
 
 (xdef uniq gensym)
 
+(xdef macex)
+
+(xdef macex1 (e)
+  (macex e 'once))
+
 ; math -----------------------------------------------------------------------
 
 ; XXX
@@ -159,9 +164,47 @@
 
 (xdef rep)
 
+(xdef coerce (x type &optional args)
+  (cond
+    ((taggedp x) (error "Can't coerce annotated object"))
+    ;((eql type (ar-type x) x))
+    ((characterp x) (case type
+                      (int    (char-code x))
+                      (string (string x))
+                      (sym    (intern (string x)))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((integerp x)   (case type
+                      (num    x)
+                      (char   (code-char x))
+                      (string (write-to-string x :base (or argsopt 10.)))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((numberp x)    (case type
+                      (int    (round x))
+                      (char   (code-char (round x)))
+                      (string (write-to-string x :base (or argsopt 10.)))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((stringp x)    (case type
+                      (sym    (intern x))
+                      (cons   (coerce x 'list))
+                      (num    (values (parse-integer x :radix (or args 10.))))
+                      (int    (round (values (parse-integer x :radix (or args 10.)))))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((consp x)      (case type
+                      (string (coerce x 'string))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((null x)       (case type
+                      (string "")
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    ((symbolp x)    (case type
+                      (string (symbol-name x))
+                      (t      (error "Can't coerce ~a ~a" x type))))
+    (t              x)))
+
 ; variable -------------------------------------------------------------------
 
 ; networking -----------------------------------------------------------------
+
+(xdef client-ip usocket:get-peer-address)
 
 (xdef open-socket (num)
   (usocket:socket-listen "localhost"
@@ -174,11 +217,15 @@
 
 ; atomic ---------------------------------------------------------------------
 
-;(xdef atomic-invoke (f)
-;  (bt:with-recursive-lock-held (ar-the-lock)
-;    (funcall f)))
+(cl (defparameter *wa-mutex* (sb-thread:make-mutex :name "wa")))
+
+(xdef atomic-invoke (f)
+  (with-mutex (*wa-mutex*)
+    (funcall f)))
 
 ; OS -------------------------------------------------------------------------
+
+(xdef memory sb-vm:memory-usage)
 
 (xdef system (cmd)
   (run-program "/bin/sh" (list "-c" cmd) :search t :output *standard-output*)
@@ -265,14 +312,31 @@
   (force-output *standard-output*)
   t)
 
+; TODO: force-close
+(xdef close (&rest args)
+  (mapcar (lambda (p)
+            (cond ((output-stream-p p) (close p :abort t))
+                  ((input-stream-p p)  (close p :abort t))
+                  ((usocket:stream-server-usocket-p p)(usocket:socket-close p))
+                  (t (error "Can't close ~A" p))))
+          args)
+  nil)
+
 ; filesystem operations ------------------------------------------------------
+
+;dir
+;file-exists
+;dir-exists
+;rmfile
+;mvfile
 
 ; thread ---------------------------------------------------------------------
 
 (xdef new-thread (f)
   (sb-thread:make-thread f))
 
-;(xdef break-thread break-thread)
+(xdef break-thread (th)
+  (sb-thread:interrupt-thread th #'break))
 
 (xdef kill-thread (th)
   (sb-thread:terminate-thread th))
@@ -282,15 +346,27 @@
 
 (xdef sleep)
 
-; dead
+(xdef dead (x)
+  (not (sb-thread:thread-alive-p x)))
 
 ; time -----------------------------------------------------------------------
+
+(xdef current-process-milliseconds get-internal-run-time)
+
+(xdef current-gc-milliseconds ()
+  sb-ext:*gc-run-time*)
 
 (xdef msec ()
   (* (sb-posix:time) 1000))
 
 (xdef seconds ()
   (sb-posix:time))
+
+(xdef timedate (&optional args)
+  (multiple-value-bind (s m h d mo y)
+                       (decode-universal-time (or args (get-universal-time))
+                                              0)
+    (list s m h d mo y)))
 
 ; error handling -------------------------------------------------------------
 
