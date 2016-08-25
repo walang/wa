@@ -2,6 +2,12 @@
 
 (in-package :cl-user)
 
+; helper ---------------------------------------------------------------------
+
+(declaim (inline careq))
+(defun careq (x y)
+  (and (consp x) (eq (car x) y)))
+
 ; namespace ------------------------------------------------------------------
 
 (defpackage wa)
@@ -27,4 +33,5 @@
 (defun wc (s env)
   (cond ((literalp s) s)
         ((symbolp s) (wa-var s env))
+        ((careq s 'quote) s)
         (t (error "bad object in expression: ~A" s))))
