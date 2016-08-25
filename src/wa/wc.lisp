@@ -2,6 +2,8 @@
 
 (in-package :cl-user)
 
+(declaim (ftype function wc))
+
 ; helper ---------------------------------------------------------------------
 
 (declaim (inline careq))
@@ -28,10 +30,20 @@
       (stringp x)
       (characterp x)))
 
+; if -------------------------------------------------------------------------
+
+(defun wc-if (args env)
+  (cond ((null args) nil)
+        ((null (cdr args)) (wc (car args) env))
+        (t `(if ,(wc (car args) env)
+                ,(wc (cadr args) env)
+                ,(wc-if (cddr args) env)))))
+
 ; compiler -------------------------------------------------------------------
 
 (defun wc (s env)
   (cond ((literalp s) s)
         ((symbolp s) (wa-var s env))
         ((careq s 'quote) s)
+        ((careq s 'if) (wc-if (cdr s) env))
         (t (error "bad object in expression: ~A" s))))
