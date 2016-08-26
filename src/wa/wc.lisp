@@ -39,6 +39,18 @@
                 ,(wc (cadr args) env)
                 ,(wc-if (cddr args) env)))))
 
+; assign ---------------------------------------------------------------------
+
+(defconstant +reserved-words+ '(t nil))
+
+(defun wc-assign (x env)
+  (let ((a (car x))
+        (b (wc (cadr x) env)))
+    (cond ((not (symbolp a)) (error "first arg to set must be a symbol: ~S" a))
+          ((member a +reserved-words+) (error "can't rebind: ~(~A~)" a))
+          ((lexp a env) `(setf ,a ,b))
+          (t `(defparameter ,(wa-sym a) ,b)))))
+
 ; compiler -------------------------------------------------------------------
 
 (defun wc (s env)
@@ -46,4 +58,5 @@
         ((symbolp s) (wa-var s env))
         ((careq s 'quote) s)
         ((careq s 'if) (wc-if (cdr s) env))
+        ((careq s 'assign) (wc-assign (cdr s) env))
         (t (error "bad object in expression: ~A" s))))
