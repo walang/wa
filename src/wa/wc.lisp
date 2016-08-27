@@ -2,6 +2,10 @@
 
 (in-package :cl-user)
 
+(load #P"../../quicklisp/setup.lisp")
+
+(ql:quickload 'named-readtables)
+
 (declaim (ftype function wc))
 
 ; helper ---------------------------------------------------------------------
@@ -23,12 +27,50 @@
 (defun wa-var (x env)
   (if (lexp x env) x (wa-sym x)))
 
+; read table -----------------------------------------------------------------
+
+(defun read-backquote (s c)
+  (declare (ignore c))
+  `(quasiquote ,(read s t nil t)))
+
+(defun read-comma (s c)
+  (declare (ignore c))
+  (if (char= (peek-char nil s) #\@)
+      (progn
+        (read-char s)
+        `(unquote-splice ,(read s t nil t)))
+      `(unquote ,(read s t nil t))))
+
+(named-readtables:defreadtable :wa
+  (:merge :standard)
+  (:macro-char #\` #'read-backquote t)
+  (:macro-char #\, #'read-comma t)
+  (:case :invert))
+
 ; literal --------------------------------------------------------------------
 
 (defun literalp (x)
   (or (numberp x)
       (stringp x)
       (characterp x)))
+
+; quasiquote -----------------------------------------------------------------
+
+(defun wc-qq1 (lv x env)
+  (cond ((= lv 0)
+         (wc x env))
+        ((careq x 'unquote)
+         (sb-impl::unquote (wc-qq1 (- lv 1) (cadr x) env)))
+        ((and (= lv 1) (careq x 'unquote-splice))
+         (sb-impl::unquote-splice (wc-qq1 (- lv 1) (cadr x) env)))
+        ((careq x 'quasiquote)
+         (list 'sb-impl::quasiquote (wc-qq1 (+ lv 1) (cadr x) env)))
+        ((consp x)
+         (mapcar (lambda (x) (wc-qq1 lv x env)) x))
+        (t x)))
+
+(defun wc-qq (x env)
+  (list 'sb-impl::quasiquote (wc-qq1 1 x env)))
 
 ; if -------------------------------------------------------------------------
 
@@ -57,6 +99,7 @@
   (cond ((literalp s) s)
         ((symbolp s) (wa-var s env))
         ((careq s 'quote) s)
+        ((careq s 'quasiquote) (wc-qq (cadr s) env))
         ((careq s 'if) (wc-if (cdr s) env))
         ((careq s 'assign) (wc-assign (cdr s) env))
         (t (error "bad object in expression: ~A" s))))
