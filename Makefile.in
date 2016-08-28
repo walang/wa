@@ -1,0 +1,19 @@
+MAKEDIRS := src/wa
+
+all install uninstall: quicklisp
+	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@;)
+
+clean:
+	@$(foreach DIR, $(MAKEDIRS), $(MAKE) $(MAKEFLAGS) -C $(DIR) $@;)
+	rm -rf quicklisp
+
+quicklisp:
+	curl -O https://beta.quicklisp.org/quicklisp.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load quicklisp.lisp --eval '(quicklisp-quickstart:install :path "quicklisp")'
+	rm -f quicklisp.lisp
+
+test: all
+	prove --ext t.wa --norc -rscfe src/wa/wa -j 9 t
+
+watch:
+	fswatch -o . -e '.*\.fasl' -e '.*\.wa\.lisp' -e '/src/wa/bi\.wa' -e '/src/wa/wa' -e '/src/wa/wa.core' | xargs -n1 -I{} make test

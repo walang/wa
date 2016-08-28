@@ -1,0 +1,31 @@
+bindir = $(DESTDIR)@prefix@/bin
+libdir = $(DESTDIR)@prefix@/lib
+
+all: wa
+
+wa: wa.core
+	./wa.core --noinform --no-sysinit --no-userinit --disable-debugger --quit --eval '(wa-compile "wa.wa")'
+	mv wa.wa.fasl wa
+	chmod 755 wa
+
+wa.core: bi.wa.lisp cf.lisp wc.lisp core.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load core.lisp
+
+bi.wa.lisp: bi.wa
+	@SBCL@ --noinform --no-sysinit --no-userinit --disable-debugger --quit --load wc.lisp --eval '(wa-compile "bi.wa" t)'
+
+bi.wa: bi/*
+	cat bi/* > bi.wa
+
+clean:
+	rm -f *.fasl *.wa.lisp bi.wa wa wa.core
+
+install: wa
+	mkdir -p $(bindir) $(libdir)/wa
+	cp wa.core $(libdir)/wa/wa.core
+	echo '#!$(libdir)/wa/wa.core --script' > $(bindir)/wa
+	cat wa >> $(bindir)/wa
+	chmod 755 $(bindir)/wa
+
+uninstall:
+	rm -rf $(bindir)/wa $(libdir)/wa
