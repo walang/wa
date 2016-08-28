@@ -1,0 +1,6 @@
+; Wa config.
+
+(in-package :cl-user)
+
+(defconstant +wa-version+ "@PACKAGE_VERSION@")
+(defconstant +wa-prefix+  "@prefix@")
