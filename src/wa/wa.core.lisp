@@ -1,4 +1,4 @@
-; Wa core.
+; Wa core image.
 
 (in-package :cl-user)
 

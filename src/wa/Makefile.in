@@ -8,8 +8,8 @@ wa: wa.core wa.wa
 	mv wa.wa.fasl wa
 	chmod 755 wa
 
-wa.core: bi.wa.lisp cf.lisp wc.lisp core.lisp
-	@SBCL@ --noinform --no-sysinit --no-userinit --non-interactive --load core.lisp
+wa.core: bi.wa.lisp cf.lisp wc.lisp wa.core.lisp
+	@SBCL@ --noinform --no-sysinit --no-userinit --non-interactive --load wa.core.lisp
 
 bi.wa.lisp: bi.wa
 	@SBCL@ --noinform --no-sysinit --no-userinit --non-interactive --load wc.lisp --eval '(wa-compile "bi.wa" t)'
