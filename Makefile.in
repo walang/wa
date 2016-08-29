@@ -15,5 +15,5 @@ quicklisp:
 test: all
 	prove --ext t.wa --norc -rscfe src/wa/wa -j 9 t
 
-watch:
-	fswatch -or src -e '.*\.fasl' -e '.*\.wa\.lisp' -e '/src/wa/bi\.wa' -e '/src/wa/wa' -e '/src/wa/wa\.core' | xargs -n1 -I{} make test
+watch: test
+	fswatch -or src -e '\.fasl$$' -e '\.wa\.lisp$$' -e '/src/wa/bi\.wa$$' -e '/src/wa/wa$$' -e '/src/wa/wa\.core$$' | xargs -n1 -I{} make test

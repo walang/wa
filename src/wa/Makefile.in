@@ -14,8 +14,8 @@ wa.core: bi.wa.lisp cf.lisp wc.lisp wa.core.lisp
 bi.wa.lisp: bi.wa
 	@SBCL@ --noinform --no-sysinit --no-userinit --non-interactive --load wc.lisp --eval '(wa-compile "bi.wa" t)'
 
-bi.wa: bi/*
-	cat bi/* > bi.wa
+bi.wa: bi/*.wa
+	cat bi/*.wa > bi.wa
 
 clean:
 	rm -f *.fasl *.wa.lisp bi.wa wa wa.core
