@@ -28,6 +28,13 @@
 (defun wa-var (x env)
   (if (lexp x env) x (wa-sym x)))
 
+(defun wa-boundp (x)
+  (let ((s (wa-sym x)))
+    (when (boundp s) s)))
+
+(defun wa-sym-val (x)
+  (symbol-value (wa-boundp x)))
+
 ; read table -----------------------------------------------------------------
 
 (defun read-backquote (s c)
@@ -103,6 +110,37 @@
           ((member a +reserved-words+) (error "can't rebind: ~(~A~)" a))
           ((lexp a env) `(setf ,a ,b))
           (t `(defparameter ,(wa-sym a) ,b)))))
+
+; tag ------------------------------------------------------------------------
+
+(defun taggedp (x)
+  (and (vectorp x) (eq (aref x 0) 'tagged)))
+
+(defun tag-name (x)
+  (and (taggedp x) (aref x 1)))
+
+(defun tag (type rep)
+  (if (eq (tag-name rep) type) rep (vector 'tagged type rep)))
+
+(defun rep (x)
+  (if (taggedp x) (aref x 2) x))
+
+; mac ------------------------------------------------------------------------
+
+(defun macp (fn)
+  (when (symbolp fn)
+    (let ((fn (wa-sym-val fn)))
+      (when (eq (tag-name fn) 'mac)
+        (rep fn)))))
+
+(defun macex (e &optional once)
+  (if (consp e)
+      (let ((mac (macp (car e))))
+        (if mac
+            (let ((ex (apply mac (cdr e))))
+              (if once ex (macex ex)))
+            e))
+      e))
 
 ; compiler -------------------------------------------------------------------
 
