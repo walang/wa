@@ -1,6 +1,4 @@
-; Wa compiler.
-
-(in-package :cl-user)
+; compiler.
 
 (load "cf.lisp")
 (load "../../quicklisp/setup.lisp")

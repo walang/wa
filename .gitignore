@@ -10,7 +10,6 @@ Makefile
 /src/wa/bi.wa
 /src/wa/cf.lisp
 /src/wa/wa
-/src/wa/wa.core
 
 *.fasl
 *.wa.lisp
