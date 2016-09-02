@@ -152,6 +152,11 @@
         ((careq s 'cl) (cadr s))
         (t (error "bad object in expression: ~A" s))))
 
+; eval -----------------------------------------------------------------------
+
+(defun wa-eval (x)
+  (eval (wc x nil)))
+
 ; compile --------------------------------------------------------------------
 
 (defun wa-compile (src &optional (verbose nil))

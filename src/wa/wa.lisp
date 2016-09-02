@@ -5,12 +5,29 @@
 (load "wc.lisp")
 (load "bi.wa.lisp")
 
+
+; repl -----------------------------------------------------------------------
+
+(defun wa-repl ()
+  (named-readtables:in-readtable :wa)
+  (loop (princ "> ")
+        (force-output)
+        (handler-case
+          (format t "~S~%" (wa-eval (read)))
+          (sb-sys:interactive-interrupt (c)
+            (declare (ignore c))
+            (terpri))
+          (end-of-file (c)
+            (declare (ignore c))
+            (terpri)
+            (exit))
+          (error (c)
+            (format *error-output* "Error: ~A~%" c)))))
+
 ; main -----------------------------------------------------------------------
 
 (defun main ()
-  ; TODO: load, repl
-  (princ *posix-argv*)
-  (terpri))
+  (wa-repl))
 
 ; dump image -----------------------------------------------------------------
 
