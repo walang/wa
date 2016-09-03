@@ -88,15 +88,6 @@
 (defun wc-qq (x env)
   (list 'sb-impl::quasiquote (wc-qq1 1 x env)))
 
-; if -------------------------------------------------------------------------
-
-(defun wc-if (args env)
-  (cond ((null args) nil)
-        ((null (cdr args)) (wc (car args) env))
-        (t `(if ,(wc (car args) env)
-                ,(wc (cadr args) env)
-                ,(wc-if (cddr args) env)))))
-
 ; assign ---------------------------------------------------------------------
 
 (defconstant +reserved-words+ '(t nil))
@@ -108,6 +99,43 @@
           ((member a +reserved-words+) (error "can't rebind: ~(~A~)" a))
           ((lexp a env) `(setf ,a ,b))
           (t `(defparameter ,(wa-sym a) ,b)))))
+
+; if -------------------------------------------------------------------------
+
+(defun wc-if (args env)
+  (cond ((null args) nil)
+        ((null (cdr args)) (wc (car args) env))
+        (t `(if ,(wc (car args) env)
+                ,(wc (cadr args) env)
+                ,(wc-if (cddr args) env)))))
+
+; fn -------------------------------------------------------------------------
+
+; TODO: optional, keyword args
+
+(declaim (inline wc-body))
+(defun wc-body (body env)
+  (mapcar (lambda (x) (wc x env)) body))
+
+(declaim (inline wc-args))
+(defun wc-args (args)
+  (cond ((null args) nil)
+        ((symbolp args) `(,args))
+        ((symbolp (cdr args)) `(,(car args) ,(cdr args)))
+        (t (cons (car args) (wc-args (cdr args))))))
+
+(declaim (inline wc-build-args))
+(defun wc-build-args (args)
+  (cond ((null args) nil)
+        ((symbolp args) `(,args))
+        ((not (listp (cdr args))) `(,(car args) &rest ,(cdr args)))
+        (t (cons (car args) (wc-build-args (cdr args))))))
+
+(defun wc-fn (args body env)
+  `(lambda ,(if (listp args)
+                (if (cdr (last args)) (wc-build-args args) args)
+                `(&rest ,args))
+    ,@(wc-body body (append (wc-args args) env))))
 
 ; tag ------------------------------------------------------------------------
 
@@ -149,6 +177,7 @@
         ((careq s 'quasiquote) (wc-qq (cadr s) env))
         ((careq s 'assign) (wc-assign (cdr s) env))
         ((careq s 'if) (wc-if (cdr s) env))
+        ((careq s 'fn) (wc-fn (cadr s) (cddr s) env))
         ((careq s 'cl) (cadr s))
         (t (error "bad object in expression: ~A" s))))
 
