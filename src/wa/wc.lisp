@@ -168,6 +168,26 @@
             e))
       e))
 
+; call -----------------------------------------------------------------------
+
+(declaim (inline wa-apply))
+(defun wa-apply (fn &rest args)
+  (cond ((functionp fn) (apply fn args))
+        ((hash-table-p fn) (gethash (car args) fn (cadr args)))
+        ((consp fn) (nth (car args) fn))
+        ((stringp fn) (char fn (car args)))
+        (t (error "function call on inappropriate object: ~A ~A" fn args))))
+
+(defun wc-call (fn args env)
+  (let ((mac (macp fn)))
+    (cond (mac
+           (wc (apply mac args) env))
+          ((careq fn 'fn)
+           `(,(wc fn env) ,@(wc-body args env)))
+          ((and (symbolp fn) (not (lexp fn env)) (functionp (wa-sym-val fn)))
+           `(funcall ,(wa-var fn env) ,@(wc-body args env)))
+          (t `(wa-apply ,(wc fn env) ,@(wc-body args env))))))
+
 ; compiler -------------------------------------------------------------------
 
 (defun wc (s env)
@@ -179,6 +199,7 @@
         ((careq s 'if) (wc-if (cdr s) env))
         ((careq s 'fn) (wc-fn (cadr s) (cddr s) env))
         ((careq s 'cl) (cadr s))
+        ((consp s) (wc-call (car s) (cdr s) env))
         (t (error "bad object in expression: ~A" s))))
 
 ; eval -----------------------------------------------------------------------
