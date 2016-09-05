@@ -207,6 +207,15 @@
 (defun wa-eval (x)
   (eval (wc x nil)))
 
+; load -----------------------------------------------------------------------
+
+(defun wa-load (file)
+  (with-open-file (i file)
+    (let ((eof (gensym)))
+      (named-readtables:in-readtable :wa)
+      (loop for x = (read i nil eof) until (eq x eof) do
+        (wa-eval x)))))
+
 ; compile --------------------------------------------------------------------
 
 (defun wa-compile (src &optional (verbose nil))
