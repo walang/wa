@@ -5,6 +5,8 @@
 (load "wc.lisp")
 (load "bi.wa.lisp")
 
+(ql:quickload :getopt)
+(ql:quickload :string-case)
 
 ; repl -----------------------------------------------------------------------
 
@@ -26,11 +28,35 @@
 
 ; main -----------------------------------------------------------------------
 
+(defparameter *opts* '(("help" :NONE) ("version" :NONE)))
+
+(defun invalid-opt (opt)
+  (format *error-output* "wa: invalid option: -~A~%" opt)
+  (exit :code 1))
+
+(defun usage ()
+  (format t "Usage: wa [options] [--] [programfile] [arguments]~2%")
+  (format t "Options:~%")
+  (format t "  -v, --version   print version number~%")
+  (format t "  -h, --help      show this message~%")
+  (exit))
+
+(defun version ()
+  (format t "v~A~%" +wa-version+)
+  (exit))
+
 (defun main ()
-  (let ((file (cadr *posix-argv*)))
-    (if file
+  (multiple-value-bind (args opts errs)
+    (getopt:getopt (cdr *posix-argv*) *opts*)
+    (unless (null errs) (invalid-opt (car errs)))
+    (dolist (opt opts)
+      (string-case:string-case ((car opt))
+        ("help" (usage))
+        ("version" (version))))
+    (let ((file (car args)))
+      (if file
         (wa-load file)
-        (wa-repl))))
+        (wa-repl)))))
 
 ; dump image -----------------------------------------------------------------
 
