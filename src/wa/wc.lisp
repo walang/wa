@@ -47,6 +47,10 @@
         `(unquote-splice ,(read s t nil t)))
       `(unquote ,(read s t nil t))))
 
+(defun read-bracket (s c)
+  (declare (ignore c))
+  `(fn (_) ,(read-delimited-list #\] s t)))
+
 (defun read-cl (s c1 c2)
   (declare (ignore c1 c2))
   (let ((*readtable* (named-readtables:find-readtable :cl)))
@@ -56,6 +60,8 @@
   (:merge :standard)
   (:macro-char #\` #'read-backquote t)
   (:macro-char #\, #'read-comma t)
+  (:macro-char #\[ #'read-bracket t)
+  (:syntax-from :standard #\) #\])
   (:dispatch-macro-char #\# #\d #'read-cl)
   (:case :invert))
 
