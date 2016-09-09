@@ -56,6 +56,10 @@
   (let ((*readtable* (named-readtables:find-readtable :cl)))
     `(cl ,(read s t nil t))))
 
+(defun read-shebang (s c1 c2)
+  (declare (ignore c1 c2))
+  (read-line s))
+
 (named-readtables:defreadtable :wa
   (:merge :standard)
   (:macro-char #\` #'read-backquote t)
@@ -63,6 +67,7 @@
   (:macro-char #\[ #'read-bracket t)
   (:syntax-from :standard #\) #\])
   (:dispatch-macro-char #\# #\d #'read-cl)
+  (:dispatch-macro-char #\# #\! #'read-shebang)
   (:case :invert))
 
 (named-readtables:defreadtable :cl
