@@ -15,7 +15,7 @@
 
 ; namespace ------------------------------------------------------------------
 
-(defpackage wa)
+(defpackage :wa (:import-from :cl :t :nil))
 
 (defun lexp (x env)
   (member x env))
